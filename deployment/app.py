@@ -1,10 +1,14 @@
-
 import os
-import pickle
-
-import gradio as gr
+import joblib
 import numpy as np
 import pandas as pd
+import streamlit as st
+
+st.set_page_config(
+    page_title="Smart MCQ Solver",
+    page_icon="🏆",
+    layout="wide"
+)
 
 MODEL_DIR = "models"
 
@@ -12,15 +16,16 @@ TFIDF_PATH = os.path.join(MODEL_DIR, "tfidf.pkl")
 LR_PATH = os.path.join(MODEL_DIR, "logistic_regression.pkl")
 XGB_PATH = os.path.join(MODEL_DIR, "xgboost.pkl")
 
-print("Loading models...")
 
-import joblib
+@st.cache_resource
+def load_models():
+    tfidf = joblib.load(TFIDF_PATH)
+    logistic_model = joblib.load(LR_PATH)
+    xgb_model = joblib.load(XGB_PATH)
+    return tfidf, logistic_model, xgb_model
 
-tfidf = joblib.load(TFIDF_PATH)
-logistic_model = joblib.load(LR_PATH)
-xgb_model = joblib.load(XGB_PATH)
 
-print("Models loaded successfully!")
+tfidf, logistic_model, xgb_model = load_models()
 
 LABELS = ["A", "B", "C", "D", "E"]
 
@@ -89,123 +94,90 @@ def predict_mcq(question, option_a, option_b, option_c, option_d, option_e):
     
     
 
-with gr.Blocks(
-    title="Smart MCQ Solver",
-    theme=gr.themes.Soft()
-) as demo:
+st.title("Smart MCQ Solver")
 
-    gr.Markdown(
-        """
-#  Smart MCQ Solver
-
+st.markdown("""
 ### Deep Learning & Generative AI Project
 
 **Indian Institute of Technology Madras**
 
-Predict the correct answer for a multiple-choice question using an ensemble of
-**TF-IDF + Logistic Regression + XGBoost**.
+Predict the correct answer using an ensemble of:
 
----
-"""
+- TF-IDF
+- Logistic Regression
+- XGBoost
+""")
+
+left, right = st.columns([2,1])
+
+with left:
+
+    question = st.text_area(
+        "Question",
+        height=120
     )
 
-    with gr.Row():
+    option_a = st.text_input("Option A")
 
-        with gr.Column(scale=2):
+    option_b = st.text_input("Option B")
 
-            question = gr.Textbox(
-                label="Question",
-                placeholder="Enter your question here...",
-                lines=4
-            )
+    option_c = st.text_input("Option C")
 
-            option_a = gr.Textbox(
-                label="Option A",
-                placeholder="Enter Option A"
-            )
+    option_d = st.text_input("Option D")
 
-            option_b = gr.Textbox(
-                label="Option B",
-                placeholder="Enter Option B"
-            )
+    option_e = st.text_input("Option E")
 
-            option_c = gr.Textbox(
-                label="Option C",
-                placeholder="Enter Option C"
-            )
-
-            option_d = gr.Textbox(
-                label="Option D",
-                placeholder="Enter Option D"
-            )
-
-            option_e = gr.Textbox(
-                label="Option E",
-                placeholder="Enter Option E"
-            )
-
-            predict_button = gr.Button(
-                "🚀 Predict",
-                variant="primary"
-            )
-
-        with gr.Column(scale=1):
-
-            best_answer = gr.Textbox(
-                label=" Best Prediction",
-                interactive=False
-            )
-
-            top3 = gr.Textbox(
-                label=" Top 3 Predictions",
-                interactive=False
-            )
-
-            confidence_table = gr.Dataframe(
-                headers=["Option", "Confidence"],
-                interactive=False,
-                wrap=True
-            )
-
-    predict_button.click(
-        fn=predict_mcq,
-        inputs=[
-            question,
-            option_a,
-            option_b,
-            option_c,
-            option_d,
-            option_e
-        ],
-        outputs=[
-            best_answer,
-            top3,
-            confidence_table
-        ]
+    predict = st.button(
+        "Predict Answer",
+        use_container_width=True
     )
 
-    gr.Markdown(
-        """
----
+with right:
 
-### Project Information
+    best_placeholder = st.empty()
+    top3_placeholder = st.empty()
+    table_placeholder = st.empty()
 
+if predict:
+
+    best_answer, top3, confidence_table = predict_mcq(
+        question,
+        option_a,
+        option_b,
+        option_c,
+        option_d,
+        option_e
+    )
+
+    best_placeholder.success(
+        f"###  Best Prediction: {best_answer}"
+    )
+
+    top3_placeholder.info(
+        f"### Top 3 Predictions\n{top3}"
+    )
+
+    table_placeholder.dataframe(
+        confidence_table,
+        use_container_width=True,
+        hide_index=True
+    )
+
+st.markdown("---")
+
+st.subheader("Project Information")
+
+st.markdown("""
 **Competition:** Smart MCQ Solver Challenge
 
-**Models Used**
+### Models Used
+
 - TF-IDF
 - Logistic Regression
 - XGBoost
 - Ensemble Learning
 
-**Evaluation Metric**
-- MAP@3 (Mean Average Precision @ 3)
+### Evaluation Metric
 
-
-"""
-    )
-    
-    
-
-if __name__ == "__main__":
-    demo.launch()
+MAP@3 (Mean Average Precision @3)
+""")
