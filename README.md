@@ -2,7 +2,7 @@
 
 **DLGenAI Project | Jul 2026 | Student: 24f1002360**
 
-**Deployment:** https://your-deployment-link-here
+**Deployment:** https://dl-24f1002360-t22026-deploy.streamlit.app/
 
 ---
 
